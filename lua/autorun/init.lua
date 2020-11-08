@@ -10,10 +10,6 @@ print("Do note that any addon who does so as well without calling base functions
 
 include("capturedmessage.lua")
 include("net_monitor.lua")
-
-print()
-print("Registering default hooks.")
-
 include("hooks.lua")
 
 print()

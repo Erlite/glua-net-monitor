@@ -1,6 +1,7 @@
 
 # gLua Net Monitor
 A simple utility that captures outgoing and incoming net messages to help you debug and optimize bandwidth.
+NOTE: This utility is still in development and has many lua errors. Do not use it yet.
 
 ## Installation
 

@@ -7,17 +7,26 @@ NetMonitor.CapturedMessage = {}
 NetMonitor.CapturedMessage.__index = NetMonitor.CapturedMessage
 
 function NetMonitor.CapturedMessage:new(msgName, isUnreliable)
-    if ~msgName or ~isstring(msgName) then
+    if !msgName or !isstring(msgName) then
         Error("Invalid message name passed in captured message constructor.")
     end
 
     isUnreliable = isUnreliable or false
 
     local msgSender = "SERVER"
-    if CLIENT then msgSender = LocalPlayer():Nick() end
-
     local msgSenderId = -1
-    if CLIENT then msgSenderId = LocalPlayer():SteamID64()
+
+    if CLIENT then 
+        if !LocalPlayer() or !LocalPlayer().Nick or !LocalPlayer().SteamID64 then
+            -- Client is still connecting.
+            msgSender = "CONNECTING"
+            msgSenderId = -1
+        else
+            msgSender = LocalPlayer():Nick()
+            msgSenderId = LocalPlayer():SteamID64()
+        end
+    end
+
     local tbl = 
     {
         name = msgName,
@@ -64,7 +73,7 @@ end
 
 -- INTERNAL: you shouldn't use this.
 function NetMonitor.CapturedMessage:SetRecipients(recipients)
-    if ~self.recipients then self.recipients = recipients end
+    if !self.recipients then self.recipients = recipients end
 end
 
 -- Returns the name and id of the sender. On clients, this will be SERVER and -1
@@ -74,7 +83,7 @@ end
 
 -- INTERNAL: you shouldn't use this.
 function NetMonitor.CapturedMessage:SetSender(client)
-    if ~client or ~isentity(client) and ~client:IsPlayer() then
+    if !client or !isentity(client) and !client:IsPlayer() then
         Error("Invalid client passed as captured message sender")
     end
 
@@ -92,7 +101,13 @@ end
 
 -- INTERNAL: you shouldn't use this.
 function NetMonitor.CapturedMessage:SetMode(mode)
-    if ~self.mode then self.mode = mode end
+    if !self.mode then
+        self.mode = mode
+        if mode == "Received" and CLIENT then
+            self.senderName = "SERVER"
+            self.senderId = -1
+        end
+    end
 end
 
 -- Returns whether or not this message is sent unreliably. Only set in outgoing messages.
