@@ -2,8 +2,7 @@
 # gLua Net Monitor
 A simple utility that captures outgoing and incoming net messages to help you debug and optimize bandwidth.
 
-![net monitor example](https://i.imgur.com/Jgz6nqK.png)
-
+![Net Monitor Example](https://i.imgur.com/nGGLrVG.png)
 
 ## Installation
 
