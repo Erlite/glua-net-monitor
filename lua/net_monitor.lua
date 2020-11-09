@@ -25,7 +25,7 @@ local function FinishReceivedMessage(msg, funcInfo, bitsLeft)
     if bitsLeft > 0 then
         local bytes = math.ceil(bitsLeft / 8)
         msg:DumpRemainingData(bytes)
-        msg:SetWastedBytes(bytes)
+        msg:SetWastedBits(bitsLeft)
         hook.Run("OnNetMessageCaptured", msg)
         hook.Run("OnNetMessageDumpedData", msg)
         return

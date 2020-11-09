@@ -36,7 +36,7 @@ function NetMonitor.CapturedMessage:new(msgName, isUnreliable)
         senderName = msgSender,
         recipients = nil,
         bits = 0,
-        wastedBytes = 0,
+        wastedBits = 0,
         data = {},
     }
 
@@ -66,14 +66,14 @@ function NetMonitor.CapturedMessage:SetBits(bits)
     self.bits = bits
 end
 
--- Returns the amount of bytes that got wasted by not being read for an incoming message.
-function NetMonitor.CapturedMessage:GetWastedBytes()
-    return self.wastedBytes
+-- Returns the amount of bits that got wasted by not being read for an incoming message.
+function NetMonitor.CapturedMessage:GetWastedBits()
+    return self.wastedBits
 end
 
 -- INTERNAL: you shouldn't use this.
-function NetMonitor.CapturedMessage:SetWastedBytes(waste)
-    self.wastedBytes = waste
+function NetMonitor.CapturedMessage:SetWastedBits(waste)
+    self.wastedBits = waste
 end
 
 -- Returns the recipients of this message, only valid if this message is outgoing.
