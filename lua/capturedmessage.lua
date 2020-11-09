@@ -218,11 +218,19 @@ function NetMonitor.CapturedMessage:WriteVector(vec)
 end
 
 -- INTERNAL: you shouldn't use this.
-function NetMonitor.CapturedMessage:DumpRemainingData(bytes)
+function NetMonitor.CapturedMessage:DumpRemainingData(bits)
     -- If a net message wasn't completely read, we'll be able to dump the rest here.
     -- If this occurs, this means you're probably wasting bandwidth.
+    if !bits or bits == 0 then return end
+
+    local bitStr = ""
+    while bits > 0 do
+        bitStr = bitStr .. tostring(net.ReadBit())
+        bits = bits - 1
+    end
+
     if bytes and bytes > 0 then
-        self.data[#self.data + 1] = {type = "DUMP", value = net.ReadData(bytes)}
+        self.data[#self.data + 1] = {type = "DUMP", value = bitStr}
     end
 end
 

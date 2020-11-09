@@ -23,8 +23,7 @@ end
 local function FinishReceivedMessage(msg, funcInfo, bitsLeft)
     DebugMsg("Finishing received message")
     if bitsLeft > 0 then
-        local bytes = math.ceil(bitsLeft / 8)
-        msg:DumpRemainingData(bytes)
+        msg:DumpRemainingData(bitsLeft)
         msg:SetWastedBits(bitsLeft)
         hook.Run("OnNetMessageCaptured", msg)
         hook.Run("OnNetMessageDumpedData", msg)
@@ -67,10 +66,9 @@ function net.Incoming(len, client)
         -- Still run the message received hook. However, since no function is there to read anything, we won't see what exactly was sent.
         -- If there's still something to read, we could just dump them into binary data.
         len = len - 16
-        local bytes = math.ceil(len / 8)
-        if bytes > 0 then
+        if len > 0 then
             DebugMsg("Message has bytes left to dump.")
-            NetMonitor.CurrentMessage:DumpRemainingData()
+            NetMonitor.CurrentMessage:DumpRemainingData(len)
             hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage)
             hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage)
             hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage)
