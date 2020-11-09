@@ -1,7 +1,9 @@
 
 # gLua Net Monitor
 A simple utility that captures outgoing and incoming net messages to help you debug and optimize bandwidth.
-NOTE: This utility is still in development and has many lua errors. Do not use it yet.
+
+![net monitor example](https://i.imgur.com/Jgz6nqK.png)
+
 
 ## Installation
 
@@ -19,7 +21,7 @@ By default, the `hooks.lua` file contains some basic implementations for debuggi
 -- Called when a net message is started via net.Start()
 -- @param msgName: name of the message that was started.
 -- @param funcInfo: info about the function that called net.Start()
-hook.Add("OnNetMessageStarted", function(msgName, funcInfo) end)
+hook.Add("OnNetMessageStarted", "NetStarted", function(msgName, funcInfo) end)
 ```
 
 ### OnNetMessageCaptured
@@ -29,7 +31,7 @@ hook.Add("OnNetMessageStarted", function(msgName, funcInfo) end)
 -- Keep your code fast in here! This is called for every net message.
 -- @param msg: The captured message, see NetMonitor.CapturedMessage
 -- @param funcInfo: For outgoing messages, the function who called net.Start()
-hook.Add("OnNetMessageCaptured", function(msg, funcInfo) end)
+hook.Add("OnNetMessageCaptured", "NetCaptured", function(msg, funcInfo) end)
 ```
 
 ### OnNetMessageIgnored
@@ -37,7 +39,7 @@ hook.Add("OnNetMessageCaptured", function(msg, funcInfo) end)
 -- Called when a net message is received but no receiving function is hooked.
 -- This is likely an oversight of a developer, albeit a wasteful one.
 -- @param msg: The captured message, see NetMonitor.CapturedMessage
-hook.Add("OnNetMessageIgnored", function(msg) end)
+hook.Add("OnNetMessageIgnored", "NetIgnored", function(msg) end)
 ```
 
 ### OnNetMessageDumpedData
@@ -47,7 +49,7 @@ hook.Add("OnNetMessageIgnored", function(msg) end)
 -- This means you or an addon on your server is wasting bandwidth!
 -- @param msg: The captured message, see NetMonitor.CapturedMessage
 -- @note: The captured message data will contain a binary string dump of the remaining data.
-hook.Add("OnNetMessageDumpedData", function(msg) end)
+hook.Add("OnNetMessageDumpedData", "NetDumped", function(msg) end)
 ```
 
 ### OnNetMessageDiscarded
@@ -55,5 +57,5 @@ hook.Add("OnNetMessageDumpedData", function(msg) end)
 -- Called when a net message is discarded due to starting another without finishing the current one.
 -- @param msg: The captured message which got discarded, likely missing some information.
 -- @param funcInfo: The info about the function which called the dicarded message's net.Start() 
-hook.Add("OnNetMessageDiscarded", function(msg, funcInfo) end)
+hook.Add("OnNetMessageDiscarded", "NetDiscarded", function(msg, funcInfo) end)
 ```

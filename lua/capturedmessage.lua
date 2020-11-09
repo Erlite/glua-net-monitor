@@ -1,4 +1,3 @@
--- © Copyright 2020 Younes Meziane. All Rights Reserved.
 AddCSLuaFile()
 
 NetMonitor = NetMonitor or {}
@@ -32,12 +31,13 @@ function NetMonitor.CapturedMessage:new(msgName, isUnreliable)
         name = msgName,
         id = util.NetworkStringToID(msgName),
         unreliable = isUnreliable,
-        data = {},
-        bytes = -1,
+        mode = nil,
         senderId = msgSenderId,
         senderName = msgSender,
-        mode = nil,
         recipients = nil,
+        bits = 0,
+        wastedBytes = 0,
+        data = {},
     }
 
     setmetatable(tbl, NetMonitor.CapturedMessage)
@@ -54,16 +54,26 @@ function NetMonitor.CapturedMessage:GetMessageId()
     return self.id
 end
 
--- Returns this message's size in bytes. 
--- For incoming messages, this is the amount of bytes received.
--- For outgoing messages, this is the amount of bytes written.
-function NetMonitor.CapturedMessage:GetBytes()
-    return self.bytes
+-- Returns this message's size in bits. 
+-- For incoming messages, this is the amount of bits received.
+-- For outgoing messages, this is the amount of bits written.
+function NetMonitor.CapturedMessage:GetBits()
+    return self.bits
 end
 
 -- INTERNAL: you shouldn't use this.
-function NetMonitor.CapturedMessage:SetBytes(bytes)
-    if self.bytes == -1 then self.bytes = bytes end
+function NetMonitor.CapturedMessage:SetBits(bits)
+    self.bits = bits
+end
+
+-- Returns the amount of bytes that got wasted by not being read for an incoming message.
+function NetMonitor.CapturedMessage:GetWastedBytes()
+    return self.wastedBytes
+end
+
+-- INTERNAL: you shouldn't use this.
+function NetMonitor.CapturedMessage:SetWastedBytes(waste)
+    self.wastedBytes = waste
 end
 
 -- Returns the recipients of this message, only valid if this message is outgoing.
@@ -93,10 +103,10 @@ end
 
 -- Returns this net message's mode.
 -- Values to expect are Send, SendToServer, Broadcast, SendPVS, SendPAS or SendOmit.
--- Errored net messages (malformed ones for example) will have the Error mode
+-- Discarded net messages will have the Discarded mode
 -- Received net messages will have the Received mode
 function NetMonitor.CapturedMessage:GetMode()
-    return self.mode or "Error"
+    return self.mode or "Unknown"
 end
 
 -- INTERNAL: you shouldn't use this.
@@ -121,7 +131,6 @@ function NetMonitor.CapturedMessage:IsReceived()
 end
 
 -- Returns the data written to the net message.
--- i.e. print(msg:GetData()[1].type .. ": " .. GetData()[1].value)
 function NetMonitor.CapturedMessage:GetData()
     return self.data
 end
@@ -168,7 +177,7 @@ function NetMonitor.CapturedMessage:WriteFloat(float)
 end
 
 -- Write an int to the captured message's data.
-function NetMonitor.CapturedMessage:WriteInt(int)
+function NetMonitor.CapturedMessage:WriteInt(int, bits)
     self.data[#self.data + 1] = {type = "INT", value = int}
 end
 
@@ -199,7 +208,7 @@ function NetMonitor.CapturedMessage:WriteMatrix(matrix)
 end
 
 -- Write an unsigned int to the captured message's data.
-function NetMonitor.CapturedMessage:WriteUInt(uint)
+function NetMonitor.CapturedMessage:WriteUInt(uint, bits)
     self.data[#self.data + 1] = {type = "UINT", value = uint}
 end
 
@@ -209,10 +218,9 @@ function NetMonitor.CapturedMessage:WriteVector(vec)
 end
 
 -- INTERNAL: you shouldn't use this.
-function NetMonitor.CapturedMessage:DumpRemainingData()
+function NetMonitor.CapturedMessage:DumpRemainingData(bytes)
     -- If a net message wasn't completely read, we'll be able to dump the rest here.
     -- If this occurs, this means you're probably wasting bandwidth.
-    local bytes, _ = net.BytesLeft()
     if bytes and bytes > 0 then
         self.data[#self.data + 1] = {type = "DUMP", value = net.ReadData(bytes)}
     end

@@ -4,25 +4,28 @@ NetMonitor = NetMonitor or {}
 NetMonitor.CurrentMessage = NetMonitor.CurrentMessage or nil
 NetMonitor.CurrentMessageFuncInfo = NetMonitor.CurrentMessageFuncInfo or nil
 NetMonitor.CurrentMessageCount = 1
+NetMonitor.CurrentMessageIncomingLen = 0
+NetMonitor.CurrentMessageStartBits = 0
 
 -- Change these flags with info you need, the less you have the less expensive it is.
 -- See https://wiki.facepunch.com/gmod/debug.getinfo
 NetMonitor.DebugInfoFlags = NetMonitor.DebugInfoFlags or "lS" 
-NetMonitor.DebugMode = true
+NetMonitor.DebugMode = false
 
 local oldNet = oldNet or {}
 local errorColor = Color(255, 90, 90)
 
 local function DebugMsg(msg)
-    if NetMonitor.DebugMode and CLIENT then MsgC(Color(0, 102, 255), "NetMonitor: ", msg, "\n") end
+    if NetMonitor.DebugMode then MsgC(Color(0, 102, 255), "NetMonitor: ", msg, "\n") end
 end
 
 -- This is called when a net.receive() hook starts a notify that the old one is over, or after a net.receive() hook if we're still reading.
-local function FinishReceivedMessage(msg, funcInfo)
+local function FinishReceivedMessage(msg, funcInfo, bitsLeft)
     DebugMsg("Finishing received message")
-    local leftBytes, _ = net.BytesLeft()
-    if leftBytes and leftBytes > 1 then
-        msg:DumpRemainingData()
+    if bitsLeft > 0 then
+        local bytes = math.ceil(bitsLeft / 8)
+        msg:DumpRemainingData(bytes)
+        msg:SetWastedBytes(bytes)
         hook.Run("OnNetMessageCaptured", msg)
         hook.Run("OnNetMessageDumpedData", msg)
         return
@@ -45,7 +48,8 @@ function net.Incoming(len, client)
     -- Setup a new captured message to read data into it.
     -- Check that there is no current message left. If there is, this means a network message was started but not sent.
     if NetMonitor.CurrentMessage != nil and !NetMonitor.CurrentMessage:IsReceived() then
-        DebugMsg("Already had a net message, discarding the old one.")
+        DebugMsg("Already had a net message, discarded.")
+        NetMonitor.CurrentMessage:SetMode("Discarded")
         hook.Run("OnNetMessageDiscarded", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
         NetMonitor.CurrentMessage = nil
         NetMonitor.CurrentMessageFuncInfo = nil
@@ -53,18 +57,18 @@ function net.Incoming(len, client)
 
     NetMonitor.CurrentMessage = NetMonitor.CapturedMessage(strName)
     NetMonitor.CurrentMessage:SetMode("Received")
+    NetMonitor.CurrentMessage:SetBits(len - 16)
 
     if SERVER then NetMonitor.CurrentMessage:SetSender(client) end
 
-    local bytes, bits = net.BytesLeft()
-    NetMonitor.CurrentMessage:SetBytes(bytes or 1) -- Engine byte used for sending the message.
-	
 	local func = net.Receivers[ strName:lower() ]
 	if ( !func ) then 
         DebugMsg("Message has no hooked function.")
         -- Still run the message received hook. However, since no function is there to read anything, we won't see what exactly was sent.
         -- If there's still something to read, we could just dump them into binary data.
-        if bytes and bytes > 1 then
+        len = len - 16
+        local bytes = math.ceil(len / 8)
+        if bytes > 0 then
             DebugMsg("Message has bytes left to dump.")
             NetMonitor.CurrentMessage:DumpRemainingData()
             hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage)
@@ -83,14 +87,22 @@ function net.Incoming(len, client)
 	len = len - 16
 
     local currentMessage = NetMonitor.CurrentMessageCount
-    -- Execute the hook
-    DebugMsg("Calling message hook")
+    local _, bits = net.BytesLeft()
+    
+    NetMonitor.CurrentMessageIncomingLen = len
+    NetMonitor.CurrentMessageStartBits = bits
+
+    DebugMsg("Calling message hook. Len: " .. len)
 	func( len, client )
-    DebugMsg("Message hook complete")
+    DebugMsg("Message hook finished!")
 
     -- If a new message was created by the receive func, don't do anything
     if currentMessage != NetMonitor.CurrentMessageCount then return end
-    FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+
+    _, bits = net.BytesLeft()
+    local bitsLeft = NetMonitor.CurrentMessageIncomingLen - (NetMonitor.CurrentMessageStartBits - bits)
+
+    FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo, bitsLeft)
     NetMonitor.CurrentMessage = nil
     NetMonitor.CurrentMessageInfo = nil
     NetMonitor.CurrentMessageCount = NetMonitor.CurrentMessageCount + 1
@@ -103,7 +115,11 @@ function net.Start(msgName, unreliable)
     -- If this was called in a receive callback, notify the monitor that the old message is over.
     if NetMonitor.CurrentMessage != nil and NetMonitor.CurrentMessage:IsReceived() then
         DebugMsg("Starting a message while a message is still marked as received, notifying that the message is over.")
-        FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+
+        _, bits = net.BytesLeft()
+        local bitsLeft = NetMonitor.CurrentMessageIncomingLen - (NetMonitor.CurrentMessageStartBits - bits)
+        FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo, bitsLeft)
+        
         NetMonitor.CurrentMessage = nil
         NetMonitor.CurrentMessageFuncInfo = nil
     end
@@ -129,7 +145,7 @@ if SERVER then -- Server only net functions
 
 oldNet.Send = oldNet.Send or net.Send
 function net.Send(ply)
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.Send(ply)
 
     -- That should never happen but sure.
@@ -139,7 +155,7 @@ function net.Send(ply)
     end
 
     NetMonitor.CurrentMessage:SetMode("Send")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits)
 
     if isentity(ply) and ply:IsPlayer() then 
         NetMonitor.CurrentMessage:SetRecipients({ply})
@@ -150,7 +166,6 @@ function net.Send(ply)
     end
 
     DebugMsg("SEND")
-
     hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
     NetMonitor.CurrentMessage = nil
     NetMonitor.CurrentMessageFuncInfo = nil
@@ -158,7 +173,7 @@ end
 
 oldNet.SendOmit = oldNet.SendOmit or net.SendOmit
 function net.SendOmit(ply)
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.SendOmit(ply)
 
     -- That should never happen but sure.
@@ -168,7 +183,7 @@ function net.SendOmit(ply)
     end
 
     NetMonitor.CurrentMessage:SetMode("SendOmit")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits)
 
     -- SendOmit switches to broadcast if the player argument is nil or empty
     if ply and isentity(ply) and ply:IsPlayer() then
@@ -198,7 +213,7 @@ end
 
 oldNet.SendPAS = oldNet.SendPAS or net.SendPAS
 function net.SendPAS(position)
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.SendPAS(position)
 
     -- That should never happen but sure.
@@ -208,7 +223,7 @@ function net.SendPAS(position)
     end
 
     NetMonitor.CurrentMessage:SetMode("SendPAS")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits)
 
     local rf = RecipientFilter()
     rf:AddPAS(position)
@@ -223,7 +238,7 @@ end
 
 oldNet.SendPVS = oldNet.SendPVS or net.SendPVS
 function net.SendPVS(position)
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.SendPVS(position)
 
     -- That should never happen but sure.
@@ -233,7 +248,7 @@ function net.SendPVS(position)
     end
 
     NetMonitor.CurrentMessage:SetMode("SendPVS")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits)
 
     local rf = RecipientFilter()
     rf:AddPVS(position)
@@ -249,7 +264,7 @@ end
 
 oldNet.Broadcast = oldNet.Broadcast or net.Broadcast
 function net.Broadcast()
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.Broadcast()
 
     if !NetMonitor.CurrentMessage then 
@@ -258,7 +273,7 @@ function net.Broadcast()
     end
 
     NetMonitor.CurrentMessage:SetMode("Broadcast")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits or 0)
     NetMonitor.CurrentMessage:SetRecipients(player.GetAll())
 
     DebugMsg("BROADCAST")
@@ -273,7 +288,7 @@ if CLIENT then -- Client only net functions
 
 oldNet.SendToServer = oldNet.SendToServer or net.SendToServer
 function net.SendToServer()
-    local bytes, _ = net.BytesWritten()
+    local _, bits = net.BytesWritten()
     oldNet.SendToServer()
 
     if !NetMonitor.CurrentMessage then 
@@ -282,7 +297,7 @@ function net.SendToServer()
     end
 
     NetMonitor.CurrentMessage:SetMode("SendToServer")
-    NetMonitor.CurrentMessage:SetBytes(bytes or 0)
+    NetMonitor.CurrentMessage:SetBits(bits or 0)
 
     DebugMsg("SENDTOSERVER")
     hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
@@ -386,16 +401,16 @@ function net.WriteFloat(float)
 end
 
 oldNet.ReadInt = oldNet.ReadInt or net.ReadInt
-function net.ReadInt()
-    local int = oldNet.ReadInt()
-    NetMonitor.CurrentMessage:WriteInt(int)
+function net.ReadInt(bits)
+    local int = oldNet.ReadInt(bits)
+    NetMonitor.CurrentMessage:WriteInt(int, bits)
     return int
 end
 
 oldNet.WriteInt = oldNet.WriteInt or net.WriteInt
 function net.WriteInt(int, bits)
     oldNet.WriteInt(int, bits)
-    NetMonitor.CurrentMessage:WriteInt(int)
+    NetMonitor.CurrentMessage:WriteInt(int, bits)
 end
 
 oldNet.ReadMatrix = oldNet.ReadMatrix or net.ReadMatrix
@@ -453,14 +468,14 @@ end
 oldNet.ReadUInt = oldNet.ReadUInt or net.ReadUInt
 function net.ReadUInt(bits)
     local uint = oldNet.ReadUInt(bits)
-    NetMonitor.CurrentMessage:WriteUInt(uint)
+    NetMonitor.CurrentMessage:WriteUInt(uint, bits)
     return uint
 end
 
 oldNet.WriteUInt = oldNet.WriteUInt or net.WriteUInt
 function net.WriteUInt(uint, bits)
     oldNet.WriteUInt(uint, bits)
-    NetMonitor.CurrentMessage:WriteUInt(uint)
+    NetMonitor.CurrentMessage:WriteUInt(uint, bits)
 end
 
 oldNet.ReadVector = oldNet.ReadVector or net.ReadVector

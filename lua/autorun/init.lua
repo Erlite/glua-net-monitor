@@ -1,5 +1,3 @@
--- © Copyright 2020 Younes Meziane. All Rights Reserved.
-
 print("======================================")
 print("= Net Message Monitor by Erlite v1.0 =")
 print("======================================")
