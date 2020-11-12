@@ -31,6 +31,7 @@ function NetMonitor.CapturedMessage:new(msgName, isUnreliable)
         name = msgName,
         id = util.NetworkStringToID(msgName),
         unreliable = isUnreliable,
+        deprecated = false,
         mode = nil,
         senderId = msgSenderId,
         senderName = msgSender,
@@ -135,6 +136,16 @@ function NetMonitor.CapturedMessage:GetData()
     return self.data
 end
 
+-- Called if the captured message was sent/received using the deprecated umsg system.
+function NetMonitor.CapturedMessage:SetDeprecatedMessage()
+    self.deprecated = true
+end
+
+-- Whether or not this message was sent/received using the deprecated umsg system.
+function NetMonitor.CapturedMessage:IsUserMessage()
+    return self.deprecated
+end
+
 -- Write an angle to the captured message's data.
 function NetMonitor.CapturedMessage:WriteAngle(ang)
     self.data[#self.data + 1] = {type = "ANGLE", value = ang}
@@ -215,6 +226,21 @@ end
 -- Write a vector to the captured message's data.
 function NetMonitor.CapturedMessage:WriteVector(vec)
     self.data[#self.data + 1] = {type = "VECTOR", value = vec}
+end
+
+-- Write a signed byte (umsg char) to the captured message's data
+function NetMonitor.CapturedMessage:WriteChar(char)
+    self.data[#self.data + 1] = {type = "CHAR", value = char}
+end
+
+-- Write a long to the captured message's data
+function NetMonitor.CapturedMessage:WriteLong(long)
+    self.data[#self.data + 1] = {type = "LONG", value = long}
+end
+
+-- Write a short to the captured message's data
+function NetMonitor.CapturedMessage:WriteShort(short)
+    self.data[#self.data + 1] = {type = "SHORT", value = short}
 end
 
 -- INTERNAL: you shouldn't use this.
