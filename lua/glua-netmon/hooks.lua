@@ -6,3 +6,10 @@ local function OnNetMessageDiscarded(msg, funcInfo)
 end
 
 hook.Add("OnNetMessageDiscarded", "NetDiscarded", OnNetMessageDiscarded)
+
+local function TempFuncRemove(msg, funcInfo)
+    if not funcInfo then return end
+    MsgC(Color(0, 255, 0), "NetMonitor: New message ", msg:GetName(), " has file path ", funcInfo.short_src, "\n")
+end
+
+hook.Add("OnNetMessageCaptured", "NetCapped", TempFuncRemove)

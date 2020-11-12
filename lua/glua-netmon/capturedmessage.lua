@@ -45,12 +45,12 @@ function NetMonitor.CapturedMessage:new(msgName, isUnreliable)
 end
 
 -- Returns this message's name.
-function NetMonitor.CapturedMessage:GetMessageName()
+function NetMonitor.CapturedMessage:GetName()
     return self.name
 end
 
 -- Returns this message's id (each message name has a unique id).
-function NetMonitor.CapturedMessage:GetMessageId()
+function NetMonitor.CapturedMessage:GetId()
     return self.id
 end
 

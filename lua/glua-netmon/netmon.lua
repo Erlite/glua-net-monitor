@@ -1,16 +1,18 @@
 AddCSLuaFile()
 
 NetMonitor = NetMonitor or {}
+NetMonitor.Registry = NetMonitor.Registry or {}
 NetMonitor.CurrentMessage = NetMonitor.CurrentMessage or nil
 NetMonitor.CurrentMessageFuncInfo = NetMonitor.CurrentMessageFuncInfo or nil
-NetMonitor.CurrentMessageCount = 1
-NetMonitor.CurrentMessageIncomingLen = 0
-NetMonitor.CurrentMessageStartBits = 0
+NetMonitor.CurrentMessageCount = NetMonitor.CurrentMessageCount or 0
+NetMonitor.CurrentMessageIncomingLen = NetMonitor.CurrentMessageIncomingLen or 0
+NetMonitor.CurrentMessageStartBits = NetMonitor.CurrentMessageStartBits or 0
 
 -- Change these flags with info you need, the less you have the less expensive it is.
+-- Please at least keep the 'lS' flags to let the utility work correctly. 
 -- See https://wiki.facepunch.com/gmod/debug.getinfo
 NetMonitor.DebugInfoFlags = NetMonitor.DebugInfoFlags or "lS" 
-NetMonitor.DebugMode = false
+NetMonitor.DebugMode = NetMonitor.DebugMode or false
 
 local oldNet = oldNet or {}
 local errorColor = Color(255, 90, 90)
@@ -25,12 +27,12 @@ local function FinishReceivedMessage(msg, funcInfo, bitsLeft)
     if bitsLeft > 0 then
         msg:DumpRemainingData(bitsLeft)
         msg:SetWastedBits(bitsLeft)
-        hook.Run("OnNetMessageCaptured", msg)
-        hook.Run("OnNetMessageDumpedData", msg)
+        hook.Run("OnNetMessageCaptured", msg, funcInfo)
+        hook.Run("OnNetMessageDumpedData", msg, funcInfo)
         return
     end
 
-    hook.Run("OnNetMessageCaptured", msg)
+    hook.Run("OnNetMessageCaptured", msg, funcInfo)
 end
 
 -- Message receiving/sending function overrides
@@ -69,14 +71,14 @@ function net.Incoming(len, client)
         if len > 0 then
             DebugMsg("Message has bytes left to dump.")
             NetMonitor.CurrentMessage:DumpRemainingData(len)
-            hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage)
-            hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage)
-            hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage)
+            hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+            hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+            hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
             return
         end
 
-        hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage)
-        hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage)
+        hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+        hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
         NetMonitor.CurrentMessage = nil
         return
     end
@@ -104,6 +106,16 @@ function net.Incoming(len, client)
     NetMonitor.CurrentMessage = nil
     NetMonitor.CurrentMessageInfo = nil
     NetMonitor.CurrentMessageCount = NetMonitor.CurrentMessageCount + 1
+end
+
+oldNet.Receive = oldNet.Receive or net.Receive
+function net.Receive(messageName, callback)
+    oldNet.Receive(messageName, callback)
+
+    local info = debug.getinfo(2, NetMonitor.DebugInfoFlags)
+    if info.short_src then
+        NetMonitor.Registry.RegisterReceiveFile(messageName, info.short_src)
+    end
 end
 
 oldNet.Start = oldNet.Start or net.Start
@@ -211,7 +223,6 @@ end
 
 oldNet.SendPAS = oldNet.SendPAS or net.SendPAS
 function net.SendPAS(position)
-    local _, bits = net.BytesWritten()
     oldNet.SendPAS(position)
 
     -- That should never happen but sure.
@@ -220,9 +231,12 @@ function net.SendPAS(position)
         return
     end
 
+
+    local _, bits = net.BytesWritten()
     NetMonitor.CurrentMessage:SetMode("SendPAS")
     NetMonitor.CurrentMessage:SetBits(bits)
 
+    -- Use a recipient filter to find all players that are in the PAS.
     local rf = RecipientFilter()
     rf:AddPAS(position)
 
@@ -236,7 +250,6 @@ end
 
 oldNet.SendPVS = oldNet.SendPVS or net.SendPVS
 function net.SendPVS(position)
-    local _, bits = net.BytesWritten()
     oldNet.SendPVS(position)
 
     -- That should never happen but sure.
@@ -245,9 +258,11 @@ function net.SendPVS(position)
         return
     end
 
+    local _, bits = net.BytesWritten()
     NetMonitor.CurrentMessage:SetMode("SendPVS")
     NetMonitor.CurrentMessage:SetBits(bits)
 
+    -- Use a recipient filter to find all players that are in the PVS.
     local rf = RecipientFilter()
     rf:AddPVS(position)
 
@@ -262,7 +277,6 @@ end
 
 oldNet.Broadcast = oldNet.Broadcast or net.Broadcast
 function net.Broadcast()
-    local _, bits = net.BytesWritten()
     oldNet.Broadcast()
 
     if !NetMonitor.CurrentMessage then 
@@ -270,6 +284,7 @@ function net.Broadcast()
         return
     end
 
+    local _, bits = net.BytesWritten()
     NetMonitor.CurrentMessage:SetMode("Broadcast")
     NetMonitor.CurrentMessage:SetBits(bits or 0)
     NetMonitor.CurrentMessage:SetRecipients(player.GetAll())
@@ -488,3 +503,5 @@ function net.WriteVector(vector)
     oldNet.WriteVector(vector)
     NetMonitor.CurrentMessage:WriteVector(vector)
 end
+
+MsgC(Color(0, 255, 0), "NetMonitor: Hooked to the net library.", "\n")
