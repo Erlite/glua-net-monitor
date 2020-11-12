@@ -73,14 +73,14 @@ function net.Incoming(len, client)
         if len > 0 then
             DebugMsg("Message has bytes left to dump.")
             NetMonitor.CurrentMessage:DumpRemainingData(len)
-            hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
-            hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
-            hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+            hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, nil)
+            hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, nil)
+            hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage, nil)
             return
         end
 
-        hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
-        hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+        hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, nil)
+        hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, nil)
         NetMonitor.CurrentMessage = nil
         return
     end
@@ -104,10 +104,36 @@ function net.Incoming(len, client)
     _, bits = net.BytesLeft()
     local bitsLeft = NetMonitor.CurrentMessageIncomingLen - (NetMonitor.CurrentMessageStartBits - bits)
 
-    FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo, bitsLeft)
+    FinishReceivedMessage(NetMonitor.CurrentMessage, nil, bitsLeft)
     NetMonitor.CurrentMessage = nil
-    NetMonitor.CurrentMessageInfo = nil
     NetMonitor.CurrentMessageCount = NetMonitor.CurrentMessageCount + 1
+end
+
+NetMonitor.UserMessageOverrides.IncomingMessage = NetMonitor.UserMessageOverrides.IncomingMessage or usermessage.IncomingMessage
+function usermessage.IncomingMessage(name, msg)
+    -- Check that there is no current message left. If there is, this means a network message was started but not sent.
+    if NetMonitor.CurrentMessage != nil and !NetMonitor.CurrentMessage:IsReceived() then
+        DebugMsg("Already had a net message, discarded.")
+        NetMonitor.CurrentMessage:SetMode("Discarded")
+        hook.Run("OnNetMessageDiscarded", NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo)
+        NetMonitor.CurrentMessage = nil
+        NetMonitor.CurrentMessageFuncInfo = nil
+    end
+
+    -- Prepare the message for reading. 
+    NetMonitor.CurrentMessage = NetMonitor.CapturedMessage(name)
+    NetMonitor.CurrentMessage:SetMode("Received")
+    NetMonitor.CurrentMessage:SetDeprecated()
+
+    local currentMessage = NetMonitor.CurrentMessageCount
+
+    NetMonitor.UserMessageOverrides.IncomingMessage(name, msg)
+
+    if currentMessage != NetMonitor.CurrentMessageCount then return end
+    
+    FinishReceivedMessage(NetMonitor.CurrentMessage, nil, 0)
+    NetMonitor.CurrentMessageCount = NetMonitor.CurrentMessageCount + 1
+    NetMonitor.CurrentMessage = nil
 end
 
 NetMonitor.NetOverrides.Receive = NetMonitor.NetOverrides.Receive or net.Receive
