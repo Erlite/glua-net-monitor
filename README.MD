@@ -18,9 +18,9 @@ By default, the `hooks.lua` file contains some basic implementations for debuggi
 
 ### OnNetMessageStarted
 ```lua
--- Called when a net message is started via net.Start()
+-- Called when a net message is started.
 -- @param msgName: name of the message that was started.
--- @param funcInfo: info about the function that called net.Start()
+-- @param funcInfo: info about the function that started the message.
 hook.Add("OnNetMessageStarted", "NetStarted", function(msgName, funcInfo) end)
 ```
 
@@ -28,9 +28,9 @@ hook.Add("OnNetMessageStarted", "NetStarted", function(msgName, funcInfo) end)
 
 ```lua
 -- Called when a net message is captured, for both outgoing and incoming messages.
--- Keep your code fast in here! This is called for every net message.
+-- Keep your code fast in here! This is called for every net/umsg message.
 -- @param msg: The captured message, see NetMonitor.CapturedMessage
--- @param funcInfo: For outgoing messages, the function who called net.Start()
+-- @param funcInfo: For outgoing messages, the function who started the message.
 hook.Add("OnNetMessageCaptured", "NetCaptured", function(msg, funcInfo) end)
 ```
 
@@ -45,6 +45,7 @@ hook.Add("OnNetMessageIgnored", "NetIgnored", function(msg) end)
 ### OnNetMessageDumpedData
 ```lua
 -- Called when a received net message does not read all the received data.
+-- Not called for the usermessage lib messages.
 -- Called after OnNetMessageCaptured & OnNetMessageIgnored
 -- This means you or an addon on your server is wasting bandwidth!
 -- @param msg: The captured message, see NetMonitor.CapturedMessage
