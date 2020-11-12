@@ -1,6 +1,7 @@
 
 # gLua Net Monitor
 A simple utility that captures outgoing and incoming net messages to help you debug and optimize bandwidth.
+Supports both the net library and the deprecated umsg library (please update your addons if you still use it).
 
 ![Net Monitor Example](https://i.imgur.com/nGGLrVG.png)
 
@@ -9,7 +10,7 @@ A simple utility that captures outgoing and incoming net messages to help you de
 Simply drop the `gLua-net-monitor` folder in your `garrysmod/addons` folder, it'll work by itself.
 
 ## Compatibility
-Addons that override any net function must call the base implementation for this to work.
+Addons that override any net/umsg/bf_read function overrides must call the base implementation for this to work.
 Overriding `net.Incoming` might stop this utility from capturing incoming messages since it requires the message header to work.
 
 ## Hooks
