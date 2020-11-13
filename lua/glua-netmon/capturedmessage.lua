@@ -137,7 +137,7 @@ function NetMonitor.CapturedMessage:GetData()
 end
 
 -- Called if the captured message was sent/received using the deprecated umsg system.
-function NetMonitor.CapturedMessage:SetDeprecatedMessage()
+function NetMonitor.CapturedMessage:SetDeprecated()
     self.deprecated = true
 end
 
