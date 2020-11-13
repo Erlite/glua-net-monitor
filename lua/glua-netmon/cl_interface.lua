@@ -83,30 +83,43 @@ function NetMonitor.Interface.Open()
     NetMonitor.Interface.StatusLabel = status
 end
 
-local function UpdateRegistryDisplay(selectedAddon)
+local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
     if not NetMonitor.Interface.RegistryAddonsList or not NetMonitor.Interface.RegistryFileList then return end
 
-    NetMonitor.Interface.RegistryAddonsList:Clear()
-    NetMonitor.Interface.RegistryFileList:Clear()
+    refreshFiles = refreshAddons or refreshFiles 
+
+    if refreshAddons then NetMonitor.Interface.RegistryAddonsList:Clear() end
+    if refreshFiles then NetMonitor.Interface.RegistryFileList:Clear() end
+
+    local isFirst = true
+    local addedLines = {}
+
+    local _, selected = NetMonitor.Interface.RegistryAddonsList:GetSelectedLine()
+    local selectedName = selected and selected:GetValue( 1 ) or nil
 
     for addon, files in pairs(NetMonitor.Registry.AddonFiles) do
-        NetMonitor.Interface.RegistryAddonsList:AddLine(addon)
+        if not addedLines[addon] and refreshAddons then    
+            NetMonitor.Interface.RegistryAddonsList:AddLine(addon)
+            addedLines[addon] = true
+        end
 
-        if not selectedAddon then
+        if refreshAddons and isFirst then
             NetMonitor.Interface.RegistryAddonsList:SelectFirstItem()
-            
+            isFirst = false
+
             for _, path in ipairs(files) do
                 NetMonitor.Interface.RegistryFileList:AddLine(path)
             end
-        elseif addon == selectedAddon then
+        elseif refreshFiles and addon == selectedName then
             for _, path in ipairs(files) do
                 NetMonitor.Interface.RegistryFileList:AddLine(path)
             end
         end
     end 
+
 end
 
-hook.Add("OnNetRegistryUpdated", "NetmonInterfaceUpdateReg", UpdateRegistryDisplay)
+hook.Add("OnNetRegistryUpdated", "NetmonInterfaceUpdateReg", function() UpdateRegistryDisplay(true, true) end)
 
 function NetMonitor.Interface.CreateRegistryInterface(parent)
     local registry = vgui.Create( "DPanel", parent, "Registry" )
@@ -130,11 +143,11 @@ function NetMonitor.Interface.CreateRegistryInterface(parent)
     addonList:DockMargin( 8, 0, 8, 8 )
     addonList:AddColumn( "Sources" )
 
-    local oldRowSelected = addonList.OnRowSelected
-    function addonList:OnRowSelected(rowIndex, row)
-        oldRowSelected(self, rowIndex, row)
-        local addonName = row:GetValue( 1 )
-        UpdateRegistryDisplay(addonName)
+    local onClickLine = addonList.OnClickLine
+
+    function addonList:OnClickLine(line, isSelected)
+        onClickLine(self, line, isSelected)
+        UpdateRegistryDisplay(false, true)
     end
     
     -- Disable synchronizing the registry if you're the server host.
@@ -167,7 +180,7 @@ function NetMonitor.Interface.CreateRegistryInterface(parent)
     NetMonitor.Interface.RegistrySyncButton = syncButton
 
     -- Populate the registry list
-    UpdateRegistryDisplay()
+    UpdateRegistryDisplay(true, true)
 
     return registry
 end

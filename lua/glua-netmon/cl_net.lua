@@ -19,6 +19,17 @@ end
 
 net.Receive("Netmon.GiveInterfacePermission", ReceiveInterfacePermission)
 
+local lastRequest = nil
+
+local function RequestInterfacePermission()
+    if lastRequest and CurTime() - lastRequest < 10 then return end
+    lastRequest = CurTime()
+    net.Start("Netmon.RequestInterfacePermission")
+    net.SendToServer()
+end
+
+concommand.Add("netmon_menu", RequestInterfacePermission, nil, "Opens the network monitor interface.")
+
 local function ReceiveRegistryChunk(len)
     local chunk = net.ReadBinaryChunk()
     NetMonitor.Networking.RegistryChunks[ #NetMonitor.Networking.RegistryChunks + 1 ] = chunk

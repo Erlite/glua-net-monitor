@@ -1,6 +1,7 @@
 NetMonitor = NetMonitor or {}
 NetMonitor.Networking = NetMonitor.Networking or {}
 
+util.AddNetworkString("Netmon.RequestInterfacePermission")
 util.AddNetworkString("Netmon.GiveInterfacePermission")
 util.AddNetworkString("Netmon.RequestRegistry")
 util.AddNetworkString("Netmon.SendRegistryChunk")
@@ -23,6 +24,18 @@ local function PlayerSay(ply, text)
 end
 
 hook.Add("PlayerSay", "NoDisplayingNetmonCommand", PlayerSay)
+
+local function ReceiveInterfaceRequest(len, ply)
+    local hasPermission = PlayerHasPermission(ply)
+    local isServerHost = ply:IsListenServerHost()
+
+    net.Start("Netmon.GiveInterfacePermission")
+        net.WriteBool(hasPermission)
+        net.WriteBool(isServerHost)
+    net.Send(ply)
+end
+
+net.Receive("Netmon.RequestInterfacePermission", ReceiveInterfaceRequest)
 
 local function RequestRegistry(len, ply)
     -- Players without permission aren't supposed to ever send that string, they can heck off.

@@ -164,7 +164,7 @@ function NetMonitor.Registry.BuildRegistryChunks()
     repeat
         local subDat = string.sub(dat, 1, chunkSize)
         dat = string.sub(dat, chunkSize)
-        print("sub: " .. subDat)
+
         local chunk = NetMonitor.BinaryChunk(id, chunkAmount, subDat)
         chunks[ #chunks + 1 ] = chunk
         id = id + 1
