@@ -13,3 +13,5 @@ NetMonitor.Config.AutoRegisterGamemodeFiles = true
 -- This will take quite a bit of memory since it'll keep track of all lua files in the garrysmod/addons folder.
 -- Workshop addons cannot be registered.
 NetMonitor.Config.AutoRegisterAddonFiles = false
+
+MsgC(Color(0, 255, 0), "NetMonitor: Loaded client configuration", "\n")

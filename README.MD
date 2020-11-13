@@ -60,3 +60,9 @@ hook.Add("OnNetMessageDumpedData", "NetDumped", function(msg) end)
 -- @param funcInfo: The info about the function which called the dicarded message's net.Start() 
 hook.Add("OnNetMessageDiscarded", "NetDiscarded", function(msg, funcInfo) end)
 ```
+
+### OnNetRegistryUpdated
+```lua
+-- Called clientside when the server's registry is received.
+hook.Add("OnNetRegistryUpdated", "NetRegistryUpdate", function() end)
+```

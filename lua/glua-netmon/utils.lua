@@ -21,3 +21,13 @@ end
 function NetMonitor.Utils.PathExists(name, path)
     return file.Exists(name, path) or (CLIENT and DirExists(name, path))
 end
+
+function NetMonitor.Utils.ChatError(msg)
+    if CLIENT then 
+        chat.AddText(Color(255, 90, 90), "NetMonitor: " .. msg)
+    end
+end
+
+function NetMonitor.Utils.ClampToScreen(w, h)
+    return math.min(ScrW(), w), math.min(ScrH(), h)
+end
