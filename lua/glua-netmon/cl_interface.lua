@@ -3,10 +3,11 @@ NetMonitor.Interface = NetMonitor.Interface or {}
 
 -- Derma 
 NetMonitor.Interface.Main = NetMonitor.Interface.Main or nil
-NetMonitor.Interface.RegistryTab = NetMonitor.Interface.RegistryTab or {}
-NetMonitor.Interface.RegistrySyncButton = NetMonitor.Interface.RegistrySyncButton or {}
-NetMonitor.Interface.RegistryAddonsList = NetMonitor.Interface.RegistryAddonsList or {}
-NetMonitor.Interface.RegistryFileList = NetMonitor.Interface.RegistryFileList or {}
+NetMonitor.Interface.RegistryTab = NetMonitor.Interface.RegistryTab or nil
+NetMonitor.Interface.RegistrySyncButton = NetMonitor.Interface.RegistrySyncButton or nil
+NetMonitor.Interface.RegistrySearch = NetMonitor.Interface.RegistrySearch or nil
+NetMonitor.Interface.RegistryAddonsList = NetMonitor.Interface.RegistryAddonsList or nil
+NetMonitor.Interface.RegistryFileList = NetMonitor.Interface.RegistryFileList or nil
 NetMonitor.Interface.StatusBar = NetMonitor.Interface.StatusBar or nil
 NetMonitor.Interface.StatusLabel = NetMonitor.Interface.StatusLabel or nil
 
@@ -21,6 +22,7 @@ function NetMonitor.Interface.Open()
         NetMonitor.Interface.RegistrySyncButton = nil
         NetMonitor.Interface.RegistryAddonsList = nil
         NetMonitor.Interface.RegistryFileList = nil
+        NetMonitor.Interface.RegistrySearch = nil
         NetMonitor.Interface.StatusBar = nil
         NetMonitor.Interface.StatusLabel = nil
     end
@@ -83,6 +85,25 @@ function NetMonitor.Interface.Open()
     NetMonitor.Interface.StatusLabel = status
 end
 
+local function SearchMatchesPath(searchTerm, path)
+    if NetMonitor.Interface.RegistrySearch.ignore then return true end
+    if #searchTerm == 0 then return true end
+    
+    -- https://wiki.facepunch.com/gmod/Global.pcall
+    -- Tracked bug, pcall() doesn't work clientside.
+    --[[local goodPattern, args = pcall(string.find(path, searchTerm))
+    if not goodPattern then
+        local pos, _, _ = string.find(path, searchTerm, 1, true)
+        return pos != nil
+    end
+
+    return select(1, args) != nil
+    ]]
+
+    local pos, _, _ = string.find(path, searchTerm, 1, true)
+    return pos != nil
+end
+
 local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
     if not NetMonitor.Interface.RegistryAddonsList or not NetMonitor.Interface.RegistryFileList then return end
 
@@ -96,6 +117,35 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
 
     local _, selected = NetMonitor.Interface.RegistryAddonsList:GetSelectedLine()
     local selectedName = selected and selected:GetValue( 1 ) or nil
+    local searchTerm = NetMonitor.Interface.RegistrySearch:GetValue()
+
+    searchTerm = string.TrimLeft(searchTerm)
+    searchTerm = string.TrimRight(searchTerm)
+
+    if selectedName == "*" or selectedName == nil then
+        local isFirst = true
+        for addon, files in pairs(NetMonitor.Registry.AddonFiles) do
+            if refreshAddons then
+                if isFirst then 
+                    NetMonitor.Interface.RegistryAddonsList:AddLine("*")
+                    NetMonitor.Interface.RegistryAddonsList:SelectFirstItem()
+                    isFirst = false
+                end
+
+                NetMonitor.Interface.RegistryAddonsList:AddLine(addon)
+            end
+
+            if refreshFiles then
+                for _, path in ipairs(files) do
+                    if SearchMatchesPath(searchTerm:lower(), path) then
+                        NetMonitor.Interface.RegistryFileList:AddLine(path)
+                    end
+                end
+            end
+        end
+
+        return
+    end
 
     for addon, files in pairs(NetMonitor.Registry.AddonFiles) do
         if not addedLines[addon] and refreshAddons then    
@@ -108,11 +158,15 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
             isFirst = false
 
             for _, path in ipairs(files) do
-                NetMonitor.Interface.RegistryFileList:AddLine(path)
+                if SearchMatchesPath(searchTerm:lower(), path) then
+                    NetMonitor.Interface.RegistryFileList:AddLine(path)
+                end
             end
         elseif refreshFiles and addon == selectedName then
             for _, path in ipairs(files) do
-                NetMonitor.Interface.RegistryFileList:AddLine(path)
+                if SearchMatchesPath(searchTerm:lower(), path) then
+                    NetMonitor.Interface.RegistryFileList:AddLine(path)
+                end
             end
         end
     end 
@@ -158,14 +212,47 @@ function NetMonitor.Interface.CreateRegistryInterface(parent)
         syncButton:SetTooltip( "Request the server's registry, you only need to do this once." )
     end
 
-    local pathList = vgui.Create( "DListView", registry)
+    local rightPanel = vgui.Create( "DPanel", registry )
+
+    local searchBar = vgui.Create( "DTextEntry", rightPanel )
+    searchBar:SetText(" Search...")
+    searchBar:Dock( TOP )
+    searchBar:DockMargin( 8, 8, 8, 8 )
+    searchBar.ignore = true
+
+    function searchBar:OnGetFocus()
+        self:SetValue("")
+    end
+
+    function searchBar:OnLoseFocus()
+        local str = self:GetValue()
+        str = string.Replace(str, " ",  "")
+
+        if #str == 0 then 
+            self:SetText(" Search...") 
+            self.ignore = true    
+        end
+    end
+
+    function searchBar:OnChange()
+        local value = self:GetValue()
+        value = string.TrimLeft(value)
+        value = string.TrimRight(value)
+
+        searchBar.ignore = #value == 0
+        UpdateRegistryDisplay(false, true)
+    end
+
+    local pathList = vgui.Create( "DListView", rightPanel)
+    pathList:Dock( FILL )
+    pathList:DockMargin( 8, 2, 8, 8 )
     pathList:AddColumn( "File Path" )
     pathList:SetMultiSelect( false )
 
     local divider = vgui.Create( "DHorizontalDivider", registry )
     divider:Dock( FILL )
     divider:SetLeft( leftPanel )
-    divider:SetRight( pathList )
+    divider:SetRight( rightPanel )
     divider:SetDividerWidth( 8 )  
     divider:SetLeftMin( 196 )  
 
@@ -178,6 +265,7 @@ function NetMonitor.Interface.CreateRegistryInterface(parent)
     NetMonitor.Interface.RegistryAddonsList = addonList
     NetMonitor.Interface.RegistryFileList = pathList
     NetMonitor.Interface.RegistrySyncButton = syncButton
+    NetMonitor.Interface.RegistrySearch = searchBar
 
     -- Populate the registry list
     UpdateRegistryDisplay(true, true)

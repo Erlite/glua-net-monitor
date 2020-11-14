@@ -22,8 +22,11 @@ net.Receive("Netmon.GiveInterfacePermission", ReceiveInterfacePermission)
 local lastRequest = nil
 
 local function RequestInterfacePermission()
+    if NetMonitor.Interface.Main then return end
+
     if lastRequest and CurTime() - lastRequest < 10 then return end
     lastRequest = CurTime()
+    
     net.Start("Netmon.RequestInterfacePermission")
     net.SendToServer()
 end

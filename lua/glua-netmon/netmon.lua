@@ -154,7 +154,7 @@ function net.Start(msgName, unreliable)
     if NetMonitor.CurrentMessage != nil and NetMonitor.CurrentMessage:IsReceived() then
         if not NetMonitor.CurrentMessage:IsUserMessage() then
             local _, bits = net.BytesLeft() 
-            local bitsLeft = NetMonitor.CurrentMessageIncomingLen - (NetMonitor.CurrentMessageStartBits - bits)
+            local bitsLeft = bits and NetMonitor.CurrentMessageIncomingLen - (NetMonitor.CurrentMessageStartBits - bits) or 0
             FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo, bitsLeft)
         else
             FinishReceivedMessage(NetMonitor.CurrentMessage, NetMonitor.CurrentMessageFuncInfo, 0)
