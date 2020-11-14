@@ -89,18 +89,12 @@ local function SearchMatchesPath(searchTerm, path)
     if NetMonitor.Interface.RegistrySearch.ignore then return true end
     if #searchTerm == 0 then return true end
     
-    -- https://wiki.facepunch.com/gmod/Global.pcall
-    -- Tracked bug, pcall() doesn't work clientside.
-    --[[local goodPattern, args = pcall(string.find(path, searchTerm))
+    local goodPattern, pos = pcall(string.find, path, searchTerm)
     if not goodPattern then
         local pos, _, _ = string.find(path, searchTerm, 1, true)
         return pos != nil
     end
 
-    return select(1, args) != nil
-    ]]
-
-    local pos, _, _ = string.find(path, searchTerm, 1, true)
     return pos != nil
 end
 
@@ -122,6 +116,8 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
     searchTerm = string.TrimLeft(searchTerm)
     searchTerm = string.TrimRight(searchTerm)
 
+    -- Limited to 512 elements. 
+    local amount = 0
     if selectedName == "*" or selectedName == nil then
         local isFirst = true
         for addon, files in pairs(NetMonitor.Registry.AddonFiles) do
@@ -129,6 +125,9 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
                 if isFirst then 
                     NetMonitor.Interface.RegistryAddonsList:AddLine("*")
                     NetMonitor.Interface.RegistryAddonsList:SelectFirstItem()
+                    local _, all = NetMonitor.Interface.RegistryAddonsList:GetSelectedLine()
+                    all:SetToolTip("Displays all registered lua files, limited to 512 files.")
+
                     isFirst = false
                 end
 
@@ -138,12 +137,14 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
             if refreshFiles then
                 for _, path in ipairs(files) do
                     if SearchMatchesPath(searchTerm:lower(), path) then
-                        NetMonitor.Interface.RegistryFileList:AddLine(path)
+                        if amount < 512 then
+                            NetMonitor.Interface.RegistryFileList:AddLine(path)
+                            amount = amount + 1
+                        end
                     end
                 end
             end
         end
-
         return
     end
 
