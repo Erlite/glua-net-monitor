@@ -31,3 +31,15 @@ end
 function NetMonitor.Utils.ClampToScreen(w, h)
     return math.min(ScrW(), w), math.min(ScrH(), h)
 end
+
+function NetMonitor.Utils.StringMatchesSearch(searchTerm, string)
+    if #searchTerm == 0 then return true end
+    
+    local goodPattern, pos = pcall(string.find, path, searchTerm)
+    if not goodPattern then
+        local pos, _, _ = string.find(path, searchTerm, 1, true)
+        return pos != nil
+    end
+
+    return pos != nil
+end

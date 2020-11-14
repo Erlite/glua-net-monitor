@@ -36,12 +36,13 @@ concommand.Add("netmon_menu", RequestInterfacePermission, nil, "Opens the networ
 local function ReceiveRegistryChunk(len)
     local chunk = net.ReadBinaryChunk()
     NetMonitor.Networking.RegistryChunks[ #NetMonitor.Networking.RegistryChunks + 1 ] = chunk
+    
     if chunk:GetId() == chunk:GetAmount() then
         NetMonitor.Registry.UpdateFromChunks(NetMonitor.Networking.RegistryChunks)
         NetMonitor.Registry.RegistryChunks = {}
 
-        if NetMonitor.Interface.RegistrySyncButton then
-            NetMonitor.Interface.RegistrySyncButton:SetEnabled(true)
+        if NetMonitor.Interface.Registry.SyncButton then
+            NetMonitor.Interface.Registry.SyncButton:SetEnabled(true)
             NetMonitor.Interface.StatusLabel:SetText("NetMonitor: Synchronized registry")
             NetMonitor.Interface.StatusBar:SetFraction( 1 )
         end
