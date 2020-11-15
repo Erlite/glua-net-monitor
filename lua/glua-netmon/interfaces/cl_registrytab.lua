@@ -46,7 +46,7 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
 
             if refreshFiles then
                 for _, path in ipairs(files) do
-                    if not NetMonitor.Interface.Registry.Search.ignore and NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
+                    if NetMonitor.Interface.Registry.Search.ignore or NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
                         if amount < 512 then
                             NetMonitor.Interface.Registry.FileList:AddLine(path)
                             amount = amount + 1
@@ -69,13 +69,13 @@ local function UpdateRegistryDisplay(refreshAddons, refreshFiles)
             isFirst = false
 
             for _, path in ipairs(files) do
-                if not NetMonitor.Interface.Registry.Search.ignore and NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
+                if NetMonitor.Interface.Registry.Search.ignore or NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
                     NetMonitor.Interface.Registry.FileList:AddLine(path)
                 end
             end
         elseif refreshFiles and addon == selectedName then
             for _, path in ipairs(files) do
-                if not NetMonitor.Interface.Registry.Search.ignore and NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
+                if NetMonitor.Interface.Registry.Search.ignore or NetMonitor.Utils.StringMatchesSearch(searchTerm:lower(), path) then
                     NetMonitor.Interface.Registry.FileList:AddLine(path)
                 end
             end

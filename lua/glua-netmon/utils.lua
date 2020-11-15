@@ -32,12 +32,12 @@ function NetMonitor.Utils.ClampToScreen(w, h)
     return math.min(ScrW(), w), math.min(ScrH(), h)
 end
 
-function NetMonitor.Utils.StringMatchesSearch(searchTerm, string)
+function NetMonitor.Utils.StringMatchesSearch(searchTerm, str)
     if #searchTerm == 0 then return true end
     
-    local goodPattern, pos = pcall(string.find, path, searchTerm)
+    local goodPattern, pos = pcall(string.find, str, searchTerm)
     if not goodPattern then
-        local pos, _, _ = string.find(path, searchTerm, 1, true)
+        local pos, _, _ = string.find(str, searchTerm, 1, true)
         return pos != nil
     end
 

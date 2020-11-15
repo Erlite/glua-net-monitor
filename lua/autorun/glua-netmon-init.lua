@@ -19,11 +19,20 @@ if SERVER then include("glua-netmon/sv_config.lua") end
 
 ClientInclude("glua-netmon/cl_config.lua")
 
+-- Miscellaneous utils and networking
 include("glua-netmon/utils.lua")
 include("glua-netmon/binarychunk.lua")
 include("glua-netmon/capturedmessage.lua")
+
+-- Registry
 include("glua-netmon/registry.lua")
-include("glua-netmon/profiler.lua")
+
+-- Profiling
+include("glua-netmon/profiling/profilingfilter.lua")
+include("glua-netmon/profiling/profilingdata.lua")
+include("glua-netmon/profiling/profiler.lua")
+
+-- Monitoring
 include("glua-netmon/netmon.lua")
 include("glua-netmon/hooks.lua")
 

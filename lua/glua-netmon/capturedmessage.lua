@@ -131,6 +131,16 @@ function NetMonitor.CapturedMessage:IsReceived()
     return self.mode == "Received"
 end
 
+-- Returns true if this message was discarded.
+function NetMonitor.CapturedMessage:IsDiscarded()
+    return self.mode == "Discarded"
+end
+
+-- Returns true if this message was ignored.
+function NetMonitor.CapturedMessage:IsIgnored()
+    return self.mode == "Ignored"
+end
+
 -- Returns the data written to the net message.
 function NetMonitor.CapturedMessage:GetData()
     return self.data

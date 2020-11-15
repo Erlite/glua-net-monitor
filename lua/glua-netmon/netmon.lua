@@ -73,6 +73,7 @@ function net.Incoming(len, client)
         if len > 0 then
             DebugMsg("Message has bytes left to dump.")
             NetMonitor.CurrentMessage:DumpRemainingData(len)
+            NetMonitor.CurrentMessage:SetMode("Ignored")
             hook.Run("OnNetMessageCaptured", NetMonitor.CurrentMessage, nil)
             hook.Run("OnNetMessageIgnored", NetMonitor.CurrentMessage, nil)
             hook.Run("OnNetMessageDumpedData", NetMonitor.CurrentMessage, nil)
