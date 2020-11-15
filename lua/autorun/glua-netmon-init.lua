@@ -40,5 +40,10 @@ ClientInclude("glua-netmon/interfaces/cl_registrytab.lua")
 ClientInclude("glua-netmon/interfaces/cl_interface.lua")
 
 
+-- Create capture folders if they don't exist.
+if NetMonitor.Utils.VerifyDataFolders() then
+    print("Created capture data folders.")
+end
+
 print()
 print("Done!")

@@ -43,3 +43,24 @@ function NetMonitor.Utils.StringMatchesSearch(searchTerm, string)
 
     return pos != nil
 end
+
+function NetMonitor.Utils.VerifyDataFolders()
+    local neededCreation = false
+
+    if not file.IsDir("netmon", "DATA") then
+        neededCreation = true
+        file.CreateDir("netmon")
+    end
+
+    if CLIENT and not file.IsDir("netmon/client", "DATA") then
+        neededCreation = true
+        file.CreateDir("netmon/client")
+    end
+
+    if not file.IsDir("netmon/server", "DATA") then
+        neededCreation = true
+        file.CreateDir("netmon/server")
+    end
+
+    return neededCreation
+end
