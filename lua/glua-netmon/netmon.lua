@@ -668,7 +668,7 @@ end
 NetMonitor.UserMessageOverrides.ReadBool = NetMonitor.UserMessageOverrides.ReadBool or bf_read.ReadBool
 function bf_read:ReadBool()
     local bool = NetMonitor.UserMessageOverrides.ReadBool(self)
-    NetMonitor.CurrentMessage:WriteBool(bool)
+    NetMonitor.CurrentMessage:WriteBit(bool and 1 or 0)
     return bool
 end
 
