@@ -7,9 +7,9 @@ NetMonitor.ProfilingData.__index = NetMonitor.ProfilingData
 function NetMonitor.ProfilingData:new()
     local tbl = 
     {
-        meta = "ProfilingData"
-        stats = {}
-        messages = {}
+        meta = "ProfilingData",
+        stats = {},
+        messages = {},
     }
 
     setmetatable(tbl, NetMonitor.ProfilingData)
@@ -22,7 +22,7 @@ function NetMonitor.ProfilingData:AddMessage(msg)
         return
     end
 
-    self.messages[ #self.messages + 1] = msg
+    self.messages[#self.messages + 1] = msg
 end
 
 setmetatable(NetMonitor.ProfilingData, {__call = NetMonitor.ProfilingData.new})
